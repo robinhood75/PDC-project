@@ -2,7 +2,7 @@
 
 import random
 
-def get_random_unicode(length):
+def get_random_unicode(length: int):
     try:
         get_char = unichr
     except NameError:
@@ -30,3 +30,6 @@ def get_random_unicode(length):
             for code_point in range(current_range[0], current_range[1] + 1)
     ]
     return ''.join(random.choice(alphabet) for i in range(length))
+
+def get_8bit_unicode(length: int):
+    return ''.join(chr(random.randint(0, 0x7F)) for i in range(length))

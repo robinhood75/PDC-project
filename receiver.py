@@ -34,8 +34,8 @@ def load_signal(N0, filename='output.txt'):
     out = np.loadtxt(filename)
     n = out.shape[0]
     if n % N0 !=0:
-        return "Transmitted signal has incorrect length"
-    return out
+        raise ValueError("Transmitted signal has incorrect length")
+    return (out, n)
 
 def decode_ascii(N0, H_hat):
     """
@@ -68,14 +68,13 @@ def decode_ascii(N0, H_hat):
 def decode_utf8(N0, H_hat):
     """
     Decodes the signal under utf-8 transmitter design:
-    Takes the sign of the average over 2*N0/3 transmissios of the same bit
+    Takes the sign of the average over 2*N0/3 transmissions of the same bit
     """
     if N0 % 3 != 0:
         raise ValueError('Warning: N0 should be multiple of 3')
     N0_eff = 2*N0//3
 
-    out = load_signal(N0)
-    n = out.shape[0]
+    out, n = load_signal(N0)
 
     out_clean = [out[i] for i in range(len(out)) if i % 3 != H_hat]
     if len(out_clean) % N0_eff != 0:
@@ -90,11 +89,40 @@ def decode_utf8(N0, H_hat):
     decoded_bits = ((decoded_bits+1)/2).astype(int)
     decoded_ints = [int(''.join(decoded_bits[8*i:8*(i+1)].astype(str)), 2) for i in range(len(decoded_bits)//8)]
     decoded_bytes = bytes(decoded_ints)
+    
+    print(f"Decoded bytes: {decoded_bytes}", f"{len(decoded_bytes)} bytes")
 
-    print(len(decoded_bits)//8, 'bytes')
+    decoded_string = decoded_bytes.decode('utf-8')
 
-    print(decoded_ints)
-    print(decoded_bytes)
+    return decoded_string
+
+def decode_utf8_8bits(N0, H_hat):
+    """
+    Decodes the signal under an utf-8 transmitter design optimized for 8bits utf-8:
+    Takes the sign of the average over 2*N0/3 transmissions of the same bit
+    """
+    if N0 % 3 != 0:
+        raise ValueError('Warning: N0 should be multiple of 3')
+    N0_eff = 2*N0//3
+
+    out, n = load_signal(N0)
+
+    out_clean = [out[i] for i in range(len(out)) if i % 3 != H_hat]
+    if len(out_clean) % N0_eff != 0:
+        raise ValueError('Warning: length of out_clean should be multiple of N0_eff')
+
+    averages = [sum(out_clean[k*N0_eff : (k+1)*N0_eff]) for k in range(n//N0)]
+
+    # Map to -1, 0 or 1
+    decoded_bits = np.sign(np.array(averages))
+
+    # Map to binary
+    decoded_bits = ((decoded_bits+1)/2).astype(int)
+
+    decoded_ints = [int(''.join(decoded_bits[7*i:7*(i+1)].astype(str)), 2) for i in range(len(decoded_bits)//7)]
+    decoded_bytes = bytes(decoded_ints)
+
+    print(f"Decoded bytes:\n{decoded_bytes}", f"{len(decoded_bytes)} bytes")
 
     decoded_string = decoded_bytes.decode('utf-8')
 
@@ -103,7 +131,7 @@ def decode_utf8(N0, H_hat):
 index, H_MAP = estimate_H()
 print("H_MAP = {} \nRemember: noise has std dev = 10".format(H_MAP))
 
-decoded_string = decode_utf8(N0, index)
+decoded_string = decode_utf8_8bits(N0, index)
 print("Decoded string using N0={}:".format(N0), decoded_string)
 
 original_message = None
@@ -121,5 +149,7 @@ if original_message:
     print(f"Total number of errors: {len(errors)}")
     for i,e in errors.items():
         print(f' - index {i}:')
-        print(f'\texpected this: {bin(ord(e["original"]))} -> {e["original"].encode("utf-8")} -> {e["original"]}')
-        print(f'\tand got this : {bin(ord(e["decoded"]))} -> {e["decoded"].encode("utf-8")} -> {e["decoded"]}')
+        print('\texpected this: {0:08b}'.format(ord(e["original"])), end='')
+        print(f' -> {e["original"].encode("utf-8")} -> {e["original"]}')
+        print('\tand got this : {0:08b}'.format(ord(e["decoded"])), end='')
+        print(f' -> {e["decoded"].encode("utf-8")} -> {e["decoded"]}')
