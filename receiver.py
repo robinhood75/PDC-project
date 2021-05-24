@@ -1,6 +1,6 @@
 import numpy as np
 
-N0=117
+N0=129
 assert N0 % 3 == 0
 ENDIANNESS = 'big'
 
@@ -128,10 +128,18 @@ def decode_utf8_8bits(N0, H_hat):
 
     return decoded_string
 
+dic = {
+    '1000': "e",
+    '1001': " ",
+    '1010': "t",
+    '1011': "a",
+    '1100': "o",
+    '1101': "i",
+    '1110': "n",
+    '1111': "s"
+    }
 
-def decode_utf8_improved(N0, H_hat, code_e=True):
-    """ Decodes what has been transmitted by transmitter_utf8_improved(code_e=code_e)"""
-    
+def decode_with_dic(N0, H_hat, dic):
     if N0 % 3 != 0:
         raise ValueError('Warning: N0 should be multiple of 3')
     N0_eff = 2*N0//3
@@ -150,67 +158,43 @@ def decode_utf8_improved(N0, H_hat, code_e=True):
     # Map to binary
     decoded_bits = ((decoded_bits+1)/2).astype(int)
 
-    # Decode using a 2 or 3 states automaton given what encoding we used
+    # Decode using a 3-states automaton
     decoded_string = []
     state = 'expecting first bit'
-    collect_byte = []
-    
-    # Case where only " " is encoded differently
-    if not code_e:
-        
-        for b in decoded_bits:
-            current_state = state
-            if current_state == 'expecting first bit':
-                if b==1:
-                    decoded_string.append(" ")
-                    # state doesn't change
-                if b==0:
-                    state = 'expecting byte'
-                    collect_byte = [0]
-            if current_state == 'expecting byte':
-                collect_byte.append(b)
-                if len(collect_byte) == 8:
-                   decoded_int = bin_to_dec(collect_byte)
-                   decoded_byte = decoded_int.to_bytes(1,ENDIANNESS)
-                   decoded_string.append(decoded_byte.decode('utf8'))
-                   state = 'expecting first bit'
+    collect_8 = collect_4 = []
 
-        print("Finished decoding with state: {}\n".format(state))
-    
-    # Case were "e" -> '10' and " " -> '11'
-    else:
-
-        for b in decoded_bits:
-            current_state = state
-            if current_state == 'expecting first bit':
-                if b==1:
-                    state = 'expecting second bit'
-                elif b==0:
-                    state = 'expecting byte'
-                    collect_byte = [0]
-            elif current_state == 'expecting second bit':
-                if b==0:
-                    decoded_string.append('e')
-                elif b==1:
-                    decoded_string.append(' ')
+    for b in decoded_bits:
+        current_state = state
+        if state == 'expecting first bit':
+            if b==1:
+                state = 'expecting 4'
+                collect_4 = [1]
+            if b==0:
+                state = 'expecting 8'
+                collect_8 = [0]
+        elif state == 'expecting 4':
+            collect_4.append(b)
+            if len(collect_4) == 4:
+                pack4 = ''.join(list(map(str,collect_4)))
+                decoded_string.append(dic[pack4])
                 state = 'expecting first bit'
-            elif current_state == 'expecting byte':
-                collect_byte.append(b)
-                if len(collect_byte) == 8:
-                   decoded_int = bin_to_dec(collect_byte)
+        elif state == 'expecting 8':
+                collect_8.append(b)
+                if len(collect_8) == 8:
+                   decoded_int = bin_to_dec(collect_8)
                    decoded_byte = decoded_int.to_bytes(1,ENDIANNESS)
                    decoded_string.append(decoded_byte.decode('utf8'))
                    state = 'expecting first bit'
 
-        print("Finished decoding with state: {}\n".format(state))
+    print("Finished decoding with state: {}\n".format(state))
 
-    return ''.join(decoded_string)
+    return ''.join(decoded_string)    
 
 
 index, H_MAP = estimate_H()
 print("H_MAP = {} \nRemember: noise has std dev = 10".format(H_MAP))
 
-decoded_string = decode_utf8_improved(N0, index, code_e=True)
+decoded_string = decode_with_dic(N0, index, dic)
 print("Decoded string using N0={}:".format(N0), decoded_string)
 
 original_message = None
