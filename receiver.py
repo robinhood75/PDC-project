@@ -130,6 +130,8 @@ def decode_utf8_8bits(N0, H_hat):
 
 
 def decode_utf8_improved(N0, H_hat, code_e=True):
+    """ Decodes what has been transmitted by transmitter_utf8_improved(code_e=code_e)"""
+    
     if N0 % 3 != 0:
         raise ValueError('Warning: N0 should be multiple of 3')
     N0_eff = 2*N0//3
@@ -148,13 +150,14 @@ def decode_utf8_improved(N0, H_hat, code_e=True):
     # Map to binary
     decoded_bits = ((decoded_bits+1)/2).astype(int)
 
-    # Decode using a 2-states automaton
+    # Decode using a 2 or 3 states automaton given what encoding we used
     decoded_string = []
     state = 'expecting first bit'
     collect_byte = []
-
-    if not code_e:
     
+    # Case where only " " is encoded differently
+    if not code_e:
+        
         for b in decoded_bits:
             current_state = state
             if current_state == 'expecting first bit':
@@ -173,7 +176,8 @@ def decode_utf8_improved(N0, H_hat, code_e=True):
                    state = 'expecting first bit'
 
         print("Finished decoding with state: {}\n".format(state))
-
+    
+    # Case were "e" -> '10' and " " -> '11'
     else:
 
         for b in decoded_bits:
