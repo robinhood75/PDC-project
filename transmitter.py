@@ -3,7 +3,7 @@ from scipy.stats import entropy
 from numpy import flip
 from math import log
 
-N0=117 # WARNING: N0 should be multiple of 3
+N0=129 # WARNING: N0 should be multiple of 3
 assert N0 % 3 == 0
 NB_CHARS = 80
 ENDIANNESS = 'big'
@@ -79,16 +79,10 @@ def transmitter_utf8(s, N0, write=True):
         for bit in input:
             f.write(str(bit)+" ")
 
-def transmitter_utf8_8bits(s, N0, write=True, compute_entropy=False):
+def transmitter_utf8_8bits(s, N0, write=True):
     # Since utf-8 on 8 bits, the MSB will always be 0 so it can be omitted.
     # We pad on 7 instead of 8 bits
     str_to_bin_format = ["{0:07b}".format(ord(i)) for i in s]
-
-    # Compute entropy to see if Huffman is meaningful
-    if compute_entropy:
-        _to_int = list(map(int,''.join(str_to_bin_format)))
-        _entropy = compute_entropy(_to_int)
-        print("Entropy of transmitted signal over blocks of 7 bits: {}\n".format(round(_entropy,4)))
     
     # Map 0 to -1
     str_to_bin = [2*int(i)-1 for x in str_to_bin_format for i in x]
@@ -102,40 +96,32 @@ def transmitter_utf8_8bits(s, N0, write=True, compute_entropy=False):
         # Add spaces and print to file
         f.write(' '.join(to_be_transmitted) + ' ')
 
-def transmitter_utf8_improved(s, N0, code_e=True):
-    """We take advantages of the high number of " " and "e" by encoding them by '11' and '10' respectively. 
-    If code_e is set to False, " " will be coded by '1' and "e" by its usual utf8 encoding
-    """
+dic = {
+    "e": '1000',
+    " ": '1001',
+    "t": '1010',
+    "a": '1011',
+    "o": '1100',
+    "i": '1101',
+    "n": '1110',
+    "s": '1111'
+    }
+
+def transmitter_with_dic(s, N0, dic):
     to_transmit = []
-    
-    # Encode into the desired binary string
-    if code_e:
-        for ch in s:
-            if ch == "e":
-                to_transmit.append('10')
-            elif ch == " ":
-                to_transmit.append('11')
-            else:
-                b = bytes(ch.encode())
-                x = int.from_bytes(b,ENDIANNESS)
-                bitstr = "{0:b}".format(x)
-                if len(bitstr) < 8:
-                    bitstr = (8-len(bitstr))*'0' + bitstr
-                to_transmit.append(bitstr)
-        to_transmit = ''.join(to_transmit)
-        
-    else:
-        for ch in s:
-            if ch == " ":
-                to_transmit.append('1')
-            else:
-                b = bytes(ch.encode())
-                x = int.from_bytes(b,ENDIANNESS)
-                bitstr = "{0:b}".format(x)
-                if len(bitstr) < 8:
-                    bitstr = (8-len(bitstr))*'0' + bitstr
-                to_transmit.append(bitstr)
-        to_transmit = ''.join(to_transmit)
+
+    for ch in s:
+        if ch in dic:
+            to_transmit.append(dic[ch])
+        else:
+            b = bytes(ch.encode())
+            x = int.from_bytes(b,ENDIANNESS)
+            bitstr = "{0:b}".format(x)
+            if len(bitstr) < 8:
+                bitstr = (8-len(bitstr))*'0' + bitstr
+            to_transmit.append(bitstr)
+
+    to_transmit = ''.join(to_transmit)
 
     # Map 0 to -1
     str_to_bin = [2*int(i)-1 for i in to_transmit]
@@ -149,21 +135,7 @@ def transmitter_utf8_improved(s, N0, code_e=True):
         # Add spaces and print to file
         f.write(' '.join(to_be_transmitted) + ' ')
 
-
-def compute_entropy(bin_seq, nb_bits=7):
-    """
-    Compute the entropy of the distribution over packets of nb_bits
-    """
-    N = len(bin_seq)
-    counter = [0]*2**nb_bits
-    for i in range(int(N/nb_bits)):
-        seq_nb_bits = bin_seq[nb_bits*i:nb_bits*(i+1)]
-        counter[bin_to_dec(seq_nb_bits)] += 1
-    distrib = [p/N for p in counter]
-    return entropy(distrib)/log(2**nb_bits)
-
-s = "Here is another sentence of rougly 80 characters. Or maybe a little bit less? No.."
-#s=" "
+s = "Probably one more 80 characters sentence that's clearly waaaaaaay longer than this"
 #s = get_random_unicode(10)
 #s = get_8bit_unicode(NB_CHARS)
 
@@ -174,4 +146,4 @@ with open('message.txt', 'wb') as f:
         f.write(i.encode('utf-8'))
     f.write('\n'.encode('utf-8'))
 
-transmitter_utf8_improved(s, N0, code_e=True)
+transmitter_with_dic(s, N0, dic)
