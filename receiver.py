@@ -1,6 +1,6 @@
 import numpy as np
 
-N0=102
+N0=117
 assert N0 % 3 == 0
 ENDIANNESS = 'big'
 
@@ -128,10 +128,85 @@ def decode_utf8_8bits(N0, H_hat):
 
     return decoded_string
 
+
+def decode_utf8_improved(N0, H_hat, code_e=True):
+    if N0 % 3 != 0:
+        raise ValueError('Warning: N0 should be multiple of 3')
+    N0_eff = 2*N0//3
+
+    out, n = load_signal(N0)
+
+    out_clean = [out[i] for i in range(len(out)) if i % 3 != H_hat]
+    if len(out_clean) % N0_eff != 0:
+        raise ValueError('Warning: length of out_clean should be multiple of N0_eff')
+
+    averages = [sum(out_clean[k*N0_eff : (k+1)*N0_eff]) for k in range(n//N0)]
+
+    # Map to -1, 0 or 1
+    decoded_bits = np.sign(np.array(averages))
+
+    # Map to binary
+    decoded_bits = ((decoded_bits+1)/2).astype(int)
+
+    # Decode using a 2-states automaton
+    decoded_string = []
+    state = 'expecting first bit'
+    collect_byte = []
+
+    if not code_e:
+    
+        for b in decoded_bits:
+            current_state = state
+            if current_state == 'expecting first bit':
+                if b==1:
+                    decoded_string.append(" ")
+                    # state doesn't change
+                if b==0:
+                    state = 'expecting byte'
+                    collect_byte = [0]
+            if current_state == 'expecting byte':
+                collect_byte.append(b)
+                if len(collect_byte) == 8:
+                   decoded_int = bin_to_dec(collect_byte)
+                   decoded_byte = decoded_int.to_bytes(1,ENDIANNESS)
+                   decoded_string.append(decoded_byte.decode('utf8'))
+                   state = 'expecting first bit'
+
+        print("Finished decoding with state: {}\n".format(state))
+
+    else:
+
+        for b in decoded_bits:
+            current_state = state
+            if current_state == 'expecting first bit':
+                if b==1:
+                    state = 'expecting second bit'
+                elif b==0:
+                    state = 'expecting byte'
+                    collect_byte = [0]
+            elif current_state == 'expecting second bit':
+                if b==0:
+                    decoded_string.append('e')
+                elif b==1:
+                    decoded_string.append(' ')
+                state = 'expecting first bit'
+            elif current_state == 'expecting byte':
+                collect_byte.append(b)
+                if len(collect_byte) == 8:
+                   decoded_int = bin_to_dec(collect_byte)
+                   decoded_byte = decoded_int.to_bytes(1,ENDIANNESS)
+                   decoded_string.append(decoded_byte.decode('utf8'))
+                   state = 'expecting first bit'
+
+        print("Finished decoding with state: {}\n".format(state))
+
+    return ''.join(decoded_string)
+
+
 index, H_MAP = estimate_H()
 print("H_MAP = {} \nRemember: noise has std dev = 10".format(H_MAP))
 
-decoded_string = decode_utf8_8bits(N0, index)
+decoded_string = decode_utf8_improved(N0, index, code_e=True)
 print("Decoded string using N0={}:".format(N0), decoded_string)
 
 original_message = None
@@ -152,4 +227,4 @@ if original_message:
         print('\texpected this: {0:08b}'.format(ord(e["original"])), end='')
         print(f' -> {e["original"].encode("utf-8")} -> {e["original"]}')
         print('\tand got this : {0:08b}'.format(ord(e["decoded"])), end='')
-        print(f' -> {e["decoded"].encode("utf-8")} -> {e["decoded"]}')
+        print(f' -> {e["decoded"].encode("utf-8")} -> {e["decoded"]}')
