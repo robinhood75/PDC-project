@@ -165,20 +165,20 @@ def decode_with_dic(N0, H_hat, dic):
 
     for b in decoded_bits:
         current_state = state
-        if state == 'expecting first bit':
+        if current_state == 'expecting first bit':
             if b==1:
                 state = 'expecting 4'
                 collect_4 = [1]
             if b==0:
                 state = 'expecting 8'
                 collect_8 = [0]
-        elif state == 'expecting 4':
+        elif current_state == 'expecting 4':
             collect_4.append(b)
             if len(collect_4) == 4:
                 pack4 = ''.join(list(map(str,collect_4)))
                 decoded_string.append(dic[pack4])
                 state = 'expecting first bit'
-        elif state == 'expecting 8':
+        elif current_state == 'expecting 8':
                 collect_8.append(b)
                 if len(collect_8) == 8:
                    decoded_int = bin_to_dec(collect_8)
