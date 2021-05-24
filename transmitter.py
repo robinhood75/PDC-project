@@ -1,6 +1,9 @@
 from utf8_generator import (get_random_unicode, get_8bit_unicode)
+from scipy.stats import entropy
+from receiver import bin_to_dec
+from math import log
 
-N0=102 # WARNING: N0 should be multiple of 3
+N0=105 # WARNING: N0 should be multiple of 3
 assert N0 % 3 == 0
 NB_CHARS = 80
 ENDIANNESS = 'big'
@@ -69,6 +72,11 @@ def transmitter_utf8_8bits(s, N0, write=True):
     # Since utf-8 on 8 bits, the MSB will always be 0 so it can be omitted.
     # We pad on 7 instead of 8 bits
     str_to_bin_format = ["{0:07b}".format(ord(i)) for i in s]
+
+    # Compute entropy to see if Huffman is meaningful
+    _to_int = list(map(int,''.join(str_to_bin_format)))
+    _entropy = compute_entropy(_to_int)
+    print("Entropy of transmitted signal over blocks of 7 bits: {}\n".format(round(_entropy,4)))
     
     # Map 0 to -1
     str_to_bin = [2*int(i)-1 for x in str_to_bin_format for i in x]
@@ -82,9 +90,21 @@ def transmitter_utf8_8bits(s, N0, write=True):
         # Add spaces and print to file
         f.write(' '.join(to_be_transmitted) + ' ')
 
-#s = "hello, my name is Arthur, and I'm 22. I know, this is kind of old."
+def compute_entropy(bin_seq, nb_bits=7):
+    """
+    Compute the entropy of the distribution of packets of nb_bits
+    """
+    N = len(bin_seq)
+    counter = [0]*2**nb_bits
+    for i in range(int(N/nb_bits)):
+        seq_nb_bits = bin_seq[nb_bits*i:nb_bits*(i+1)]
+        counter[bin_to_dec(seq_nb_bits)] += 1
+    distrib = [p/N for p in counter]
+    return entropy(distrib)/log(2**nb_bits)
+
+s = "hello, my name is Arthur, and I'm 22. I know, this is kind of old.Now we have 80"
 #s = get_random_unicode(10)
-s = get_8bit_unicode(NB_CHARS)
+#s = get_8bit_unicode(NB_CHARS)
 
 print(s.encode('utf-8'), f"{len(s.encode('utf-8'))} bytes")
 
