@@ -192,7 +192,7 @@ def decode_with_dic(N0, H_hat, dic):
 
 
 index, H_MAP = estimate_H()
-print("H_MAP = {} \nRemember: noise has std dev = 10".format(H_MAP))
+print("Deleted index: {} (from the following estimate: {})\n".format(index, H_MAP))
 
 decoded_string = decode_with_dic(N0, index, dic)
 print("Decoded string using N0={}:".format(N0), decoded_string)
