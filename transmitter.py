@@ -103,9 +103,12 @@ def transmitter_utf8_8bits(s, N0, write=True, compute_entropy=False):
         f.write(' '.join(to_be_transmitted) + ' ')
 
 def transmitter_utf8_improved(s, N0, code_e=True):
-    # We take advantages of the high number of spaces by encoding them to '1'
+    """We take advantages of the high number of " " and "e" by encoding them by '11' and '10' respectively. 
+    If code_e is set to False, " " will be coded by '1' and "e" by its usual utf8 encoding
+    """
     to_transmit = []
     
+    # Encode into the desired binary string
     if code_e:
         for ch in s:
             if ch == "e":
@@ -149,7 +152,7 @@ def transmitter_utf8_improved(s, N0, code_e=True):
 
 def compute_entropy(bin_seq, nb_bits=7):
     """
-    Compute the entropy of the distribution of packets of nb_bits
+    Compute the entropy of the distribution over packets of nb_bits
     """
     N = len(bin_seq)
     counter = [0]*2**nb_bits
