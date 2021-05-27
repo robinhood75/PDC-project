@@ -3,9 +3,9 @@ from scipy.stats import entropy
 from numpy import flip
 from math import log
 
-N0=129 # WARNING: N0 should be multiple of 3
+N0=3 # WARNING: N0 should be multiple of 3
 assert N0 % 3 == 0
-NB_CHARS = 80
+NB_CHARS = 2
 ENDIANNESS = 'big'
 
 def bin_to_dec(lst):
@@ -135,9 +135,44 @@ def transmitter_with_dic(s, N0, dic):
         # Add spaces and print to file
         f.write(' '.join(to_be_transmitted) + ' ')
 
-s = "Probably one more 80 characters sentence that's clearly waaaaaaay longer than this"
+def transmitter_utf8_8bits_adapted(s, N0_4, N0_3, write=True):
+    """
+    Idea: split each 7 bytes words into two parts of 4 and 3 bytes
+    Input:
+        N0_4: Number of times we duplicate each bit of each 4-bit elements
+        N0_3: Number of times we duplicate each bit of each 3-bit elements
+    """
+
+    # Convert to int
+    char_to_int = [ord(i) for i in s]
+    #print(char_to_int)
+
+    # Split each 7 bit-int into two 4-bit and 3-bit ints
+    splitted_int = [(i >> 3, i % 2**3) for i in char_to_int]
+    #print(splitted_int)
+
+    # Binary signal in [-1,1]^{16} and [-1,1]^{8}
+    converted_int = [(['-1']*(15-i4) + ['1'] + ['-1']*(i4), ['-1']*(7-i3) + ['1'] + ['-1']*(i3)) for i4,i3 in splitted_int]
+    #for e in converted_int:
+    #    print(e)
+
+    #print('Duplication:')
+    duplicated = [[x for x in i4 for i in range(N0_4)] + [x for x in i3 for i in range(N0_3)] for i4, i3 in converted_int]
+
+    to_be_transmitted = []
+    for d in duplicated:
+        to_be_transmitted += d
+    #print(to_be_transmitted)
+    
+    print(f"Length of the transmitted sequence: {len(to_be_transmitted)}")
+    
+    with open('input.txt', 'w') as f:
+        # Add spaces and print to file
+        f.write(' '.join(to_be_transmitted) + ' ')
+    
+#s = "Probably one more 80 characters sentence that's clearly waaaaaaay longer than this"
 #s = get_random_unicode(10)
-#s = get_8bit_unicode(NB_CHARS)
+s = get_8bit_unicode(NB_CHARS)
 
 print(s.encode('utf-8'), f"{len(s.encode('utf-8'))} bytes")
 
@@ -146,4 +181,4 @@ with open('message.txt', 'wb') as f:
         f.write(i.encode('utf-8'))
     f.write('\n'.encode('utf-8'))
 
-transmitter_with_dic(s, N0, dic)
+transmitter_utf8_8bits_adapted(s, N0, N0)
