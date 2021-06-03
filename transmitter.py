@@ -12,7 +12,7 @@ def w(t, c_i, psi, T):
     c_i is the sequence of codes, psi a function, T the time interval of the pulse train
     Returns the pulse train signal
     """
-    return np.array(sum([c_i[i]*psi(t - i*T, T) for i in range(len(c_i))]))
+    return np.array(sum( [c_i[i]*psi(t - i*T, T) for i in range(len(c_i))] ))
     
 def sample(w, T, T_min, T_max):
     """
