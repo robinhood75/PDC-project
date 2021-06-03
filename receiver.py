@@ -2,7 +2,7 @@ import numpy as np
 
 N0=105
 assert N0 % 3 == 0
-ENDIANNESS = 'big'
+ENCODING = 'utf-8'
 
 def load_signal(N0, filename='output.txt'):
     # Load the received signal
@@ -54,7 +54,7 @@ def decode_utf8_8bits(N0, H_hat):
 
     print(f"Decoded bytes:\n{decoded_bytes}", f"{len(decoded_bytes)} bytes")
 
-    decoded_string = decoded_bytes.decode('utf-8')
+    decoded_string = decoded_bytes.decode(ENCODING)
 
     return decoded_string
 
@@ -66,7 +66,7 @@ print("Decoded string using N0={}:".format(N0), decoded_string)
 
 original_message = None
 with open('message.txt', 'rb') as f:
-    original_message = f.read().decode('utf-8').strip()
+    original_message = f.read().decode(ENCODING).strip()
 
 if original_message:
     print("Original message was: '", original_message, "'", sep='')
@@ -80,6 +80,6 @@ if original_message:
     for i,e in errors.items():
         print(f' - index {i}:')
         print('\texpected this: {0:08b}'.format(ord(e["original"])), end='')
-        print(f' -> {e["original"].encode("utf-8")} -> {e["original"]}')
+        print(f' -> {e["original"].encode(ENCODING)} -> {e["original"]}')
         print('\tand got this : {0:08b}'.format(ord(e["decoded"])), end='')
-        print(f' -> {e["decoded"].encode("utf-8")} -> {e["decoded"]}')
+        print(f' -> {e["decoded"].encode(ENCODING)} -> {e["decoded"]}')
