@@ -12,7 +12,7 @@ fi
 $PY transmitter.py
 
 # Pass signal through channel
-$PY client.py
+$PY client.py --srv_hostname=iscsrv72.epfl.ch --srv_port=80
 
 # Decode received signal
 $PY receiver.py
