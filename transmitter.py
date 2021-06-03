@@ -22,4 +22,4 @@ def sample(w, T, T_min, T_max):
         raise ValueError(f'T_max ({T_max}) needs to be greater than T_min ({T_min})')
         
     t = np.linspace(T_min, T_max, T)
-    return w(ti)
+    return w(t)
