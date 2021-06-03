@@ -27,26 +27,35 @@ def remove_noise(y, m, filter='moving average'):
         y: signal to filter
         m: window size
     """
-    # Careful: filter reduces size of y, pad y with 0s to keep same size
     
     if filter == 'moving average':
-        # Moving average taken from: https://stackoverflow.com/a/14314054
-        ret = np.cumsum(y, dtype=float)
-        ret[m:] = ret[m:] - ret[:-m]
-        return ret[m - 1:] / m
+        # pad with 0s on the right and on the left to keep the same size
+        avged_y = np.zeros(len(y))
+        padded_y = np.pad(np.array(y), (m//2,m//2))
+        for k in range(avged_y.size):
+            avged_y[k] = np.sum(padded_y[k:k+m])/m
+        return avged_y
 
-def get_charac(w_hat, psi, T_min, T_max, T):
+def get_charac(signal, psi, T_min, T_max, T, removed_index):
     """
     Performs w_hat dot psi_j for every j to recover the bits
     """
     bits = [0]*7
-    N0_eff = 2*(T_max-T_min)/T//3
+    N0 = 3*signal.shape[0]//2
+    dt = (T_max-T_min)/N0
+    
+    grid = []
+    for i in range(N0):
+        if i%3 != removed_index:
+            grid.append(T_min + i*dt)
+            
     for k in range(7):
-        signal = np.array(w_hat[k*N0:(k+1)*N0])
-        dot_product = signal.dot(np.array([psi(j*T) for j in range(N0_eff//7)]))
+        psi_k = np.array([psi(t - k*T, T) for t in grid])
+        dot_product = signal.dot(psi_k)
         bits[k] = (np.sign(dot_product)+1)/2
-        
-    decoded_ints = [int(''.join(bits[7*i:7*(i+1)].astype(str)), 2) for i in range(len(bits)//7)]
+
+    bits = np.array(bits)
+    decoded_ints = [int(bits.dot(np.flip(np.array([2**k for k in range(7)]))))]
     decoded_bytes = bytes(decoded_ints)
     
-    return decoded_bits.decode('utf-8')
+    return decoded_bytes.decode('utf-8'), bits
